@@ -1,5 +1,5 @@
 const staticCacheName = 'site-static-v2';
-const dynamicCacheName = 'site-dynamic-v1';
+const dynamicCacheName = 'site-dynamic-v2';
 const assets = [
   '/',
   '/index.html',
@@ -10,7 +10,8 @@ const assets = [
   '/css/materialize.min.css',
   '/img/dish.png',
   'https://fonts.googleapis.com/icon?family=Material+Icons',
-  'https://fonts.gstatic.com/s/materialicons/v47/flUhRq6tzZclQEJ-Vdg-IuiaDsNcIhQ8tQ.woff2'
+  'https://fonts.gstatic.com/s/materialicons/v47/flUhRq6tzZclQEJ-Vdg-IuiaDsNcIhQ8tQ.woff2',
+  '/pages/fallback.html'
 ];
 
 // install event
@@ -24,12 +25,12 @@ self.addEventListener('install', evt => {
   );
 });
 
-// activate eventf
+// activate eventtt
 self.addEventListener('activate', evt => {
   evt.waitUntil(
     caches.keys().then(keys => {
       return Promise.all(keys
-        .filter(key => key !== staticCacheName)
+        .filter(key => key !== staticCacheName && key !== dynamicCacheName)
         .map(key => caches.delete(key))
       );
     })
@@ -47,7 +48,11 @@ self.addEventListener('fetch', evt => {
           cache.put(evt.request.url, fetchRes.clone());
           return fetchRes
         });
-      });
+      }).catch(() => {
+        if(evt.request.url.indexOf('.html') > -1) {
+          caches.match('/pages/fallback.html');
+        }
+      })
     })
   );
 });
