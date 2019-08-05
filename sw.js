@@ -1,3 +1,12 @@
+
+// caches.match(resourceUrl) - use to a resource from cache
+// evt.waitUntil(function) - used to make sure a function is executed before finishing the event
+// evt.respondWith(function?) - used to on fetch to send back value when fetching
+// caches.open(cacheName) - used to open a specific cache
+// cache.put(url, value) - used to cache a single resource.
+// cache.addAll(array) - used to add multiple resources
+// caches.keys() - used to obtain cache names
+
 const staticCacheName = 'site-static-v2';
 const dynamicCacheName = 'site-dynamic-v2';
 const assets = [
@@ -14,6 +23,17 @@ const assets = [
   '/pages/fallback.html'
 ];
 
+// cache size limit function
+const limitCacheSize = (cacheName, size) => {
+    caches.open(cacheName).then(cache => {
+        cache.keys().then(keys => {
+            if (keys.length > size) {
+                cache.delete(keys[0]).then(limitCacheSize(cacheName, size))
+            }
+        })
+    })
+}
+
 // install event
 self.addEventListener('install', evt => {
   //console.log('service worker installed');
@@ -29,6 +49,7 @@ self.addEventListener('install', evt => {
 self.addEventListener('activate', evt => {
   evt.waitUntil(
     caches.keys().then(keys => {
+        console.log('keys', keys);
       return Promise.all(keys
         .filter(key => key !== staticCacheName && key !== dynamicCacheName)
         .map(key => caches.delete(key))
@@ -46,11 +67,12 @@ self.addEventListener('fetch', evt => {
       return cacheRes || fetch(evt.request).then(fetchRes => {
         return caches.open(dynamicCacheName).then(cache => {
           cache.put(evt.request.url, fetchRes.clone());
+          limitCacheSize(dynamicCacheName, 3);
           return fetchRes
         });
       }).catch(() => {
         if(evt.request.url.indexOf('.html') > -1) {
-          caches.match('/pages/fallback.html');
+          return caches.match('/pages/fallback.html');
         }
       })
     })
